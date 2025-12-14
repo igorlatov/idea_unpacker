@@ -31,6 +31,8 @@ Requirements:
 - At least 3 ideas must reference specific authors/thinkers who have written about related concepts
 - 1-2 ideas can be your own synthesis (mark as model-generated)
 - Focus on angles that are NOT mainstream
+- Ideas must directly address the user's stated intent, not adjacent topics
+- Reject famous frameworks that require reinterpretation to fit
 
 Return JSON array:
 [{{
@@ -130,6 +132,7 @@ User intent: {user_input.intent}
 Requirements:
 - Choose format that EMBODIES the idea (becomes it, not describes it)
 - Formats: poem, quotes, micro_essay, aphorisms, dialogue
+- If dialogue, speakers must be concrete people, not abstractions or personified concepts
 - Define exactly 3 evaluation criteria:
   1. "surprise_density" — insight per sentence, penalize filler and obvious statements
   2. "embodiment" — does the form itself demonstrate the idea, not just explain it?
