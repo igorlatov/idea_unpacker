@@ -1,7 +1,10 @@
 """
 Configuration for the Idea Unpacker agent flow.
-Set your API keys as environment variables or replace the defaults.
+Set your API keys in a .env file or as environment variables.
 """
+
+from dotenv import load_dotenv
+load_dotenv()
 
 import os
 
@@ -13,7 +16,7 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 
 # Model identifiers
 CLAUDE_MODEL = "claude-sonnet-4-20250514"
-GPT_MODEL = "gpt-4o"
+GPT_MODEL = "gpt-4o-mini"
 GEMINI_MODEL = "gemini-1.5-flash"
 DEEPSEEK_MODEL = "deepseek-chat"
 

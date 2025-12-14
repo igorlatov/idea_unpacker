@@ -1,64 +1,50 @@
 """
-LLM client wrappers for Claude, GPT, Gemini, and DeepSeek.
+LLM client wrappers using official SDKs.
 """
 
-import httpx
 import json
-from typing import Optional
+import httpx
+from openai import OpenAI
+from anthropic import Anthropic
 import config
 
 
-async def call_claude(prompt: str, system: Optional[str] = None) -> str:
+# Initialize clients
+anthropic_client = Anthropic(api_key=config.ANTHROPIC_API_KEY)
+openai_client = OpenAI(api_key=config.OPENAI_API_KEY)
+
+
+async def call_claude(prompt: str, system: str = None) -> str:
     """Call Anthropic Claude API."""
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        messages = [{"role": "user", "content": prompt}]
-        payload = {
-            "model": config.CLAUDE_MODEL,
-            "max_tokens": 2048,
-            "messages": messages
-        }
-        if system:
-            payload["system"] = system
-        
-        response = await client.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": config.ANTHROPIC_API_KEY,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json"
-            },
-            json=payload
-        )
-        response.raise_for_status()
-        return response.json()["content"][0]["text"]
+    kwargs = {
+        "model": config.CLAUDE_MODEL,
+        "max_tokens": 2048,
+        "messages": [{"role": "user", "content": prompt}]
+    }
+    if system:
+        kwargs["system"] = system
+    
+    response = anthropic_client.messages.create(**kwargs)
+    return response.content[0].text
 
 
-async def call_gpt(prompt: str, system: Optional[str] = None) -> str:
+async def call_gpt(prompt: str, system: str = None) -> str:
     """Call OpenAI GPT API."""
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        messages = []
-        if system:
-            messages.append({"role": "system", "content": system})
-        messages.append({"role": "user", "content": prompt})
-        
-        response = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {config.OPENAI_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": config.GPT_MODEL,
-                "messages": messages,
-                "max_tokens": 2048
-            }
-        )
-        response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"]
+    messages = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+    
+    response = openai_client.chat.completions.create(
+        model=config.GPT_MODEL,
+        messages=messages,
+        max_tokens=2048
+    )
+    return response.choices[0].message.content
 
 
 async def call_gemini(prompt: str) -> str:
-    """Call Google Gemini API."""
+    """Call Google Gemini API (still using httpx - no official sync SDK)."""
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.post(
             f"https://generativelanguage.googleapis.com/v1beta/models/{config.GEMINI_MODEL}:generateContent",
@@ -73,28 +59,24 @@ async def call_gemini(prompt: str) -> str:
         return response.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
-async def call_deepseek(prompt: str, system: Optional[str] = None) -> str:
+async def call_deepseek(prompt: str, system: str = None) -> str:
     """Call DeepSeek API (OpenAI-compatible)."""
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        messages = []
-        if system:
-            messages.append({"role": "system", "content": system})
-        messages.append({"role": "user", "content": prompt})
-        
-        response = await client.post(
-            "https://api.deepseek.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {config.DEEPSEEK_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": config.DEEPSEEK_MODEL,
-                "messages": messages,
-                "max_tokens": 2048
-            }
-        )
-        response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"]
+    deepseek_client = OpenAI(
+        api_key=config.DEEPSEEK_API_KEY,
+        base_url="https://api.deepseek.com"
+    )
+    
+    messages = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+    
+    response = deepseek_client.chat.completions.create(
+        model=config.DEEPSEEK_MODEL,
+        messages=messages,
+        max_tokens=2048
+    )
+    return response.choices[0].message.content
 
 
 def parse_json_response(text: str) -> dict:
