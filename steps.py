@@ -100,12 +100,15 @@ Return ONLY valid JSON."""
 
 
 def step3b_select_top_idea(scored_ideas: list[ScoredIdea]) -> ScoredIdea:
-    """Select highest combined score. Flag divergence."""
-    sorted_ideas = sorted(scored_ideas, key=lambda x: x.combined_score, reverse=True)
-    top = sorted_ideas[0]
+    """Prefer high-divergence ideas (contested = interesting), then highest score."""
     
-    if top.score_delta > config.SCORE_DIVERGENCE_THRESHOLD:
-        print(f"⚡ High divergence detected (delta={top.score_delta:.1f}) — contested territory")
+    divergent = [s for s in scored_ideas if s.score_delta > config.SCORE_DIVERGENCE_THRESHOLD]
+    
+    if divergent:
+        top = max(divergent, key=lambda x: x.combined_score)
+        print(f"⚡ Prioritizing divergent idea (contested = interesting)")
+    else:
+        top = max(scored_ideas, key=lambda x: x.combined_score)
     
     return top
 
@@ -125,23 +128,33 @@ User topic: {user_input.topic}
 User intent: {user_input.intent}
 
 Requirements:
-- Choose format that EMBODIES the idea (not just describes it)
+- Choose format that EMBODIES the idea (becomes it, not describes it)
 - Formats: poem, quotes, micro_essay, aphorisms, dialogue
-- Define exactly 3 evaluation criteria including "surprise_density" (insight per sentence)
-- Set minimum_bar (1-10) based on topic complexity
+- Define exactly 3 evaluation criteria:
+  1. "surprise_density" — insight per sentence, penalize filler and obvious statements
+  2. "embodiment" — does the form itself demonstrate the idea, not just explain it?
+  3. One criterion specific to this idea's core tension
+- Set minimum_bar between 8.0-9.5 (high bar — most first drafts should fail)
+
+Reject outputs that:
+- State the obvious
+- Use clichés or common advice language
+- Could appear in a typical self-help book
+- Tell rather than show
 
 Return JSON:
 {{
     "format_type": "micro_essay",
-    "rationale": "why this format",
-    "criteria": ["criterion_1", "criterion_2", "surprise_density"],
-    "minimum_bar": 6.5
+    "rationale": "why this format embodies (not describes) the idea",
+    "criteria": ["surprise_density", "embodiment", "idea_specific_criterion"],
+    "minimum_bar": 8.5
 }}
 
 Return ONLY valid JSON."""
 
     response = await call_deepseek(prompt)
     data = parse_json_response(response)
+    data["minimum_bar"] = max(data.get("minimum_bar", 8.0), config.MINIMUM_BAR_FLOOR)
     return FormatSpec(**data)
 
 
